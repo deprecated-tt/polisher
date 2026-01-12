@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+screenshots/
+*.log
+
+# User settings (contains personal screen coordinates)
+polisher_settings.json
+
+# Build artifacts
+*.spec
+*.manifest
+*.exe
+
+# Archives
+*.zip
+*.rar
+*.7z
+polisher_settings.json
+polisher_settings.example.json
