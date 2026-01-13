@@ -609,13 +609,120 @@ class ScreenTextCapture:
                         self.loop_running = False
                         break
                     elif action == 'unknown':
-                        print(f"Цикл остановлен: текст не распознан. OCR: {ocr_text}")
-                        self.loop_running = False
-                        break
+                        print(f"Текст не распознан с первой попытки. OCR: {ocr_text}")
+                        print("Делаем повторную попытку OCR через 1 секунду...")
+                        time.sleep(1)
+
+                        # Повторная попытка OCR
+                        ocr_text_retry = self.capture_ocr_only()
+                        if ocr_text_retry:
+                            action, value = self.parse_ocr_result(ocr_text_retry)
+                            print(f"OCR результат (повторная попытка): action={action}, value={value}")
+
+                            if action == 'unknown':
+                                print(f"Цикл остановлен: текст не распознан после 2 попыток. OCR: {ocr_text_retry}")
+                                self.loop_running = False
+                                break
+                            # Если распознали - обрабатываем результат через continue, чтобы перейти к следующим elif
+                            # Но нам нужно обработать результат прямо здесь
+                            elif action == 'stop':
+                                print(f"Цикл завершен! Достигнут +10! (после повтора)")
+                                self.log_statistics(current_level, 'F1', 'success', 10)
+                                self.show_notification("Успех! Достигнут +10!")
+                                self.loop_running = False
+                                break
+                            elif action == 'f1':
+                                if value is None:
+                                    print("F1 failed (после повтора), продолжаем с F1-флоу")
+                                    self.log_statistics(current_level, 'F1', 'failed', current_level)
+                                else:
+                                    print(f"F1 success to level {value} (после повтора), продолжаем с F1-флоу")
+                                    self.log_statistics(current_level, 'F1', 'success', value)
+                                    current_level = value
+                                random_delay = random.uniform(RANDOM_DELAY_MIN, RANDOM_DELAY_MAX)
+                                print(f"Случайная задержка: {random_delay:.2f} сек")
+                                time.sleep(random_delay)
+                                continue
+                            elif action == 'f5':
+                                # Переходим на F5 подцикл - копируем логику из основного блока
+                                print(f"Переходим на F5-флоу для +{value} (после повтора)")
+                                self.log_statistics(current_level, 'F1', 'success', value)
+                                current_level = value
+                                random_delay = random.uniform(RANDOM_DELAY_MIN, RANDOM_DELAY_MAX)
+                                print(f"Случайная задержка: {random_delay:.2f} сек")
+                                time.sleep(random_delay)
+                                # Запускаем подцикл F5 (копия кода ниже)
+                                while self.loop_running and action == 'f5':
+                                    print(f"Запускаю F5-флоу для +{value}")
+                                    if not self.execute_drag_action_f5(from_loop=True):
+                                        print("Failed to execute F5 action, stopping loop")
+                                        self.loop_running = False
+                                        break
+                                    time.sleep(OCR_DELAY)
+                                    if not self.loop_running:
+                                        break
+                                    ocr_text = self.capture_ocr_only()
+                                    if ocr_text:
+                                        action, value = self.parse_ocr_result(ocr_text)
+                                        print(f"OCR результат после F5: action={action}, value={value}")
+                                        if action == 'stop':
+                                            print(f"Цикл завершен! Достигнут +10!")
+                                            self.log_statistics(current_level, 'F5', 'success', 10)
+                                            self.show_notification("Успех! Достигнут +10!")
+                                            self.loop_running = False
+                                            break
+                                        elif action == 'unknown':
+                                            print(f"Текст не распознан после F5. Попытка повтора...")
+                                            time.sleep(1)
+                                            ocr_text_retry2 = self.capture_ocr_only()
+                                            if ocr_text_retry2:
+                                                action, value = self.parse_ocr_result(ocr_text_retry2)
+                                                print(f"OCR результат после F5 (повтор): action={action}, value={value}")
+                                                if action == 'unknown':
+                                                    print(f"Цикл остановлен: текст не распознан после F5 (2 попытки). OCR: {ocr_text_retry2}")
+                                                    self.loop_running = False
+                                                    break
+                                            else:
+                                                print("Цикл остановлен: не удалось прочитать OCR после F5 (повтор)")
+                                                self.loop_running = False
+                                                break
+                                        if action == 'f1':
+                                            if value is None:
+                                                print("F5 failed, выходим из F5-подцикла, переходим к F1")
+                                                self.log_statistics(current_level, 'F5', 'failed', current_level)
+                                            else:
+                                                print(f"F5 success but dropped to level {value}, переходим к F1")
+                                                self.log_statistics(current_level, 'F5', 'success', value)
+                                                current_level = value
+                                            random_delay = random.uniform(RANDOM_DELAY_MIN, RANDOM_DELAY_MAX)
+                                            print(f"Случайная задержка: {random_delay:.2f} сек")
+                                            time.sleep(random_delay)
+                                            break
+                                        else:
+                                            self.log_statistics(current_level, 'F5', 'success', value)
+                                            current_level = value
+                                            random_delay = random.uniform(RANDOM_DELAY_MIN, RANDOM_DELAY_MAX)
+                                            print(f"Случайная задержка: {random_delay:.2f} сек")
+                                            time.sleep(random_delay)
+                                    else:
+                                        print("Цикл остановлен: не удалось прочитать OCR после F5")
+                                        self.loop_running = False
+                                        break
+                                continue
+                        else:
+                            print("Цикл остановлен: не удалось прочитать OCR при повторе")
+                            self.loop_running = False
+                            break
                     elif action == 'f1':
-                        print("Продолжаем с F1-флоу")
-                        # Логируем провал (уровень не изменился)
-                        self.log_statistics(current_level, 'F1', 'failed', current_level)
+                        if value is None:
+                            # Провал (уровень не изменился)
+                            print("F1 failed, продолжаем с F1-флоу")
+                            self.log_statistics(current_level, 'F1', 'failed', current_level)
+                        else:
+                            # Успех, но уровень низкий (< 3)
+                            print(f"F1 success to level {value}, продолжаем с F1-флоу")
+                            self.log_statistics(current_level, 'F1', 'success', value)
+                            current_level = value
                         # Случайная задержка перед следующим действием
                         random_delay = random.uniform(RANDOM_DELAY_MIN, RANDOM_DELAY_MAX)
                         print(f"Случайная задержка: {random_delay:.2f} сек")
@@ -658,13 +765,60 @@ class ScreenTextCapture:
                                     self.loop_running = False
                                     break
                                 elif action == 'unknown':
-                                    print(f"Цикл остановлен: текст не распознан после F5. OCR: {ocr_text}")
-                                    self.loop_running = False
-                                    break
+                                    print(f"Текст не распознан после F5 с первой попытки. OCR: {ocr_text}")
+                                    print("Делаем повторную попытку OCR через 1 секунду...")
+                                    time.sleep(1)
+
+                                    # Повторная попытка OCR
+                                    ocr_text_retry = self.capture_ocr_only()
+                                    if ocr_text_retry:
+                                        action, value = self.parse_ocr_result(ocr_text_retry)
+                                        print(f"OCR результат после F5 (повторная попытка): action={action}, value={value}")
+
+                                        if action == 'unknown':
+                                            print(f"Цикл остановлен: текст не распознан после F5 (2 попытки). OCR: {ocr_text_retry}")
+                                            self.loop_running = False
+                                            break
+                                        elif action == 'stop':
+                                            print(f"Цикл завершен! Достигнут +10! (после повтора)")
+                                            self.log_statistics(current_level, 'F5', 'success', 10)
+                                            self.show_notification("Успех! Достигнут +10!")
+                                            self.loop_running = False
+                                            break
+                                        elif action == 'f1':
+                                            if value is None:
+                                                print("F5 failed (после повтора), выходим из F5-подцикла, переходим к F1")
+                                                self.log_statistics(current_level, 'F5', 'failed', current_level)
+                                            else:
+                                                print(f"F5 success but dropped to level {value} (после повтора), переходим к F1")
+                                                self.log_statistics(current_level, 'F5', 'success', value)
+                                                current_level = value
+                                            random_delay = random.uniform(RANDOM_DELAY_MIN, RANDOM_DELAY_MAX)
+                                            print(f"Случайная задержка: {random_delay:.2f} сек")
+                                            time.sleep(random_delay)
+                                            break
+                                        else:  # action == 'f5'
+                                            print(f"F5 success to level {value} (после повтора), продолжаем F5-подцикл")
+                                            self.log_statistics(current_level, 'F5', 'success', value)
+                                            current_level = value
+                                            random_delay = random.uniform(RANDOM_DELAY_MIN, RANDOM_DELAY_MAX)
+                                            print(f"Случайная задержка: {random_delay:.2f} сек")
+                                            time.sleep(random_delay)
+                                            # Продолжаем F5 подцикл
+                                    else:
+                                        print("Цикл остановлен: не удалось прочитать OCR после F5 при повторе")
+                                        self.loop_running = False
+                                        break
                                 elif action == 'f1':
-                                    print("Выходим из F5-подцикла, переходим к F1")
-                                    # Логируем провал F5 (уровень не изменился)
-                                    self.log_statistics(current_level, 'F5', 'failed', current_level)
+                                    if value is None:
+                                        # Провал F5 (уровень не изменился)
+                                        print("F5 failed, выходим из F5-подцикла, переходим к F1")
+                                        self.log_statistics(current_level, 'F5', 'failed', current_level)
+                                    else:
+                                        # Успех, но уровень упал ниже 3 (это редкий случай)
+                                        print(f"F5 success but dropped to level {value}, переходим к F1")
+                                        self.log_statistics(current_level, 'F5', 'success', value)
+                                        current_level = value
                                     # Случайная задержка перед переходом к F1
                                     random_delay = random.uniform(RANDOM_DELAY_MIN, RANDOM_DELAY_MAX)
                                     print(f"Случайная задержка: {random_delay:.2f} сек")
