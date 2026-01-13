@@ -44,6 +44,9 @@ screenshots/
 # User settings (contains personal screen coordinates)
 polisher_settings.json
 
+# Statistics (contains usage data)
+polisher_statistics.jsonl
+
 # Build artifacts
 *.spec
 *.manifest

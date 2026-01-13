@@ -34,6 +34,9 @@ MOUSE_SPEED_MAX = 0.25
 # Settings file path
 SETTINGS_FILE = 'polisher_settings.json'
 
+# Statistics file path
+STATISTICS_FILE = 'polisher_statistics.jsonl'
+
 def configure_tesseract():
     """Configure tesseract path if on Windows"""
     if sys.platform == 'win32' and os.path.exists(TESSERACT_CMD):

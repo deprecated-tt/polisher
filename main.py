@@ -13,7 +13,7 @@ import keyboard
 import json
 import os
 import random
-from config import configure_tesseract, OCR_LANG, APP_NAME, OCR_DELAY, SETTINGS_FILE, RANDOM_DELAY_MIN, RANDOM_DELAY_MAX, CLICK_DELAY_MIN, CLICK_DELAY_MAX, MOUSE_SPEED_MIN, MOUSE_SPEED_MAX
+from config import configure_tesseract, OCR_LANG, APP_NAME, OCR_DELAY, SETTINGS_FILE, STATISTICS_FILE, RANDOM_DELAY_MIN, RANDOM_DELAY_MAX, CLICK_DELAY_MIN, CLICK_DELAY_MAX, MOUSE_SPEED_MIN, MOUSE_SPEED_MAX
 
 # Configure Tesseract on startup
 configure_tesseract()
@@ -271,6 +271,34 @@ class ScreenTextCapture:
             print(f"Settings saved to {SETTINGS_FILE}")
         except Exception as e:
             print(f"Error saving settings: {e}")
+
+    def log_statistics(self, from_level, action, result, to_level):
+        """Логирует статистику попыток в файл
+
+        Args:
+            from_level: уровень до попытки (0-10)
+            action: действие ('F1' или 'F5')
+            result: результат ('success', 'failed')
+            to_level: уровень после попытки (0-10)
+        """
+        try:
+            from datetime import datetime
+
+            stat_entry = {
+                'timestamp': datetime.now().isoformat(),
+                'from_level': from_level,
+                'action': action,
+                'result': result,
+                'to_level': to_level
+            }
+
+            # Append to JSONL file (one JSON object per line)
+            with open(STATISTICS_FILE, 'a', encoding='utf-8') as f:
+                f.write(json.dumps(stat_entry, ensure_ascii=False) + '\n')
+
+            print(f"Stats logged: {from_level} -> {to_level} ({action}, {result})")
+        except Exception as e:
+            print(f"Error logging statistics: {e}")
 
     def select_region_handler(self):
         selector = RegionSelector()
@@ -539,6 +567,7 @@ class ScreenTextCapture:
     def run_loop(self):
         """Основной цикл выполнения"""
         print("Loop thread started")
+        current_level = 0  # Отслеживаем текущий уровень предмета
         try:
             while self.loop_running:
                 if not self.drag_point_a or not self.drag_point_b or not self.drag_point_c:
@@ -574,6 +603,9 @@ class ScreenTextCapture:
 
                     if action == 'stop':
                         print(f"Цикл завершен! Достигнут +10!")
+                        # Логируем успешное достижение +10
+                        self.log_statistics(current_level, 'F1', 'success', 10)
+                        self.show_notification("Успех! Достигнут +10!")
                         self.loop_running = False
                         break
                     elif action == 'unknown':
@@ -582,6 +614,8 @@ class ScreenTextCapture:
                         break
                     elif action == 'f1':
                         print("Продолжаем с F1-флоу")
+                        # Логируем провал (уровень не изменился)
+                        self.log_statistics(current_level, 'F1', 'failed', current_level)
                         # Случайная задержка перед следующим действием
                         random_delay = random.uniform(RANDOM_DELAY_MIN, RANDOM_DELAY_MAX)
                         print(f"Случайная задержка: {random_delay:.2f} сек")
@@ -589,6 +623,9 @@ class ScreenTextCapture:
                         # Продолжаем цикл с F1-флоу (начнется со следующей итерации)
                         continue
                     elif action == 'f5':
+                        # Логируем успешный переход на уровень N (value)
+                        self.log_statistics(current_level, 'F1', 'success', value)
+                        current_level = value  # Обновляем текущий уровень
                         # Случайная задержка перед F5-флоу
                         random_delay = random.uniform(RANDOM_DELAY_MIN, RANDOM_DELAY_MAX)
                         print(f"Случайная задержка: {random_delay:.2f} сек")
@@ -615,6 +652,9 @@ class ScreenTextCapture:
 
                                 if action == 'stop':
                                     print(f"Цикл завершен! Достигнут +10!")
+                                    # Логируем успешное достижение +10 через F5
+                                    self.log_statistics(current_level, 'F5', 'success', 10)
+                                    self.show_notification("Успех! Достигнут +10!")
                                     self.loop_running = False
                                     break
                                 elif action == 'unknown':
@@ -623,6 +663,8 @@ class ScreenTextCapture:
                                     break
                                 elif action == 'f1':
                                     print("Выходим из F5-подцикла, переходим к F1")
+                                    # Логируем провал F5 (уровень не изменился)
+                                    self.log_statistics(current_level, 'F5', 'failed', current_level)
                                     # Случайная задержка перед переходом к F1
                                     random_delay = random.uniform(RANDOM_DELAY_MIN, RANDOM_DELAY_MAX)
                                     print(f"Случайная задержка: {random_delay:.2f} сек")
@@ -631,6 +673,9 @@ class ScreenTextCapture:
                                     break
                                 # Если action == 'f5', подцикл продолжится
                                 else:  # action == 'f5'
+                                    # Логируем успешный переход на новый уровень через F5
+                                    self.log_statistics(current_level, 'F5', 'success', value)
+                                    current_level = value  # Обновляем текущий уровень
                                     # Случайная задержка перед следующим F5
                                     random_delay = random.uniform(RANDOM_DELAY_MIN, RANDOM_DELAY_MAX)
                                     print(f"Случайная задержка: {random_delay:.2f} сек")
