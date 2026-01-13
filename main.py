@@ -688,8 +688,9 @@ class ScreenTextCapture:
                                                 break
                                         if action == 'f1':
                                             if value is None:
-                                                print("F5 failed, выходим из F5-подцикла, переходим к F1")
-                                                self.log_statistics(current_level, 'F5', 'failed', current_level)
+                                                print("F5 failed (поломка!), предмет упал на 0, выходим из F5-подцикла, переходим к F1")
+                                                self.log_statistics(current_level, 'F5', 'failed', 0)
+                                                current_level = 0
                                             else:
                                                 print(f"F5 success but dropped to level {value}, переходим к F1")
                                                 self.log_statistics(current_level, 'F5', 'success', value)
@@ -787,8 +788,9 @@ class ScreenTextCapture:
                                             break
                                         elif action == 'f1':
                                             if value is None:
-                                                print("F5 failed (после повтора), выходим из F5-подцикла, переходим к F1")
-                                                self.log_statistics(current_level, 'F5', 'failed', current_level)
+                                                print("F5 failed (поломка!) (после повтора), предмет упал на 0, выходим из F5-подцикла, переходим к F1")
+                                                self.log_statistics(current_level, 'F5', 'failed', 0)
+                                                current_level = 0
                                             else:
                                                 print(f"F5 success but dropped to level {value} (после повтора), переходим к F1")
                                                 self.log_statistics(current_level, 'F5', 'success', value)
@@ -811,9 +813,10 @@ class ScreenTextCapture:
                                         break
                                 elif action == 'f1':
                                     if value is None:
-                                        # Провал F5 (уровень не изменился)
-                                        print("F5 failed, выходим из F5-подцикла, переходим к F1")
-                                        self.log_statistics(current_level, 'F5', 'failed', current_level)
+                                        # Провал F5 (поломка!) - предмет упал на 0
+                                        print("F5 failed (поломка!), предмет упал на 0, выходим из F5-подцикла, переходим к F1")
+                                        self.log_statistics(current_level, 'F5', 'failed', 0)
+                                        current_level = 0
                                     else:
                                         # Успех, но уровень упал ниже 3 (это редкий случай)
                                         print(f"F5 success but dropped to level {value}, переходим к F1")
